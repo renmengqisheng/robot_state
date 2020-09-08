@@ -7,11 +7,30 @@
 
 const float pi = 3.1415926;
 
-const float roll_threshold = 10;
-const float pitch_threshold = 10;
-const float yaw_threshold = 10;
+const float roll_threshold = 30;
+const float pitch_threshold = 30;
+const float yaw_threshold = 30;
+
+const float angular_velocity_x_threshold = 0.05;
+const float angular_velocity_y_threshold = 0.05;
+const float angular_velocity_z_threshold = 0.05;
 
 double roll = 0.0, pitch = 0.0, yaw = 0.0;
+double angular_velocity[3] = {0};
+
+bool is_motion(double velocity[3])
+{
+    if(fabs(velocity[0]) < angular_velocity_x_threshold && fabs(velocity[1]) < angular_velocity_y_threshold && fabs(velocity[2]) < angular_velocity_z_threshold)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+        
+}
+
 
 void IMU_read(const sensor_msgs::Imu::ConstPtr& msg)
 {
@@ -25,6 +44,10 @@ void IMU_read(const sensor_msgs::Imu::ConstPtr& msg)
     roll = roll / pi * 180;
     pitch = pitch / pi * 180;
     yaw = yaw / pi * 180;
+
+    angular_velocity[0] = msg->angular_velocity.x;
+    angular_velocity[1] = msg->angular_velocity.y;
+    angular_velocity[2] = msg->angular_velocity.z;
 }
 
 int main(int argc, char** argv)
@@ -33,7 +56,7 @@ int main(int argc, char** argv)
 
     ros::NodeHandle node;
     ros::Subscriber IMU = node.subscribe("imu", 1, IMU_read);
-    ros::Publisher state_pub = node.advertise<std_msgs::String>("state", 20);
+    ros::Publisher state_pub = node.advertise<std_msgs::String>("robotis/base/ini_pose", 20);
 
     ros::Rate r(20);
     while(ros::ok())
@@ -44,41 +67,48 @@ int main(int argc, char** argv)
         // debug
         // printf("roll: %f, pitch: %f, yaw: %f\n\n", roll, pitch, yaw);
 
-        if(roll > -roll_threshold && roll < roll_threshold && pitch > -pitch_threshold && pitch < pitch_threshold)
+        if(is_motion(angular_velocity))
         {
-            state.data = "NORMAL";  // 正常状态
+            state.data = "normal";  // 正常状态
         }
-        else if(roll > -roll_threshold && roll < roll_threshold && pitch > pitch_threshold)  // 正前方
+        else
         {
-            state.data = "FRONT";
-        }
-        else if(roll < -roll_threshold  && pitch > pitch_threshold)  // 左前方
-        {
-            state.data = "LEFT_FRONT";
-        }
-        else if(roll > roll_threshold  && pitch > pitch_threshold) // 右前方
-        {
-            state.data = "RIGHT_FRONT";
-        }
-        else if(roll < -roll_threshold && pitch > -pitch_threshold && pitch < pitch_threshold)  // 正左方
-        {
-            state.data = "LEFT";
-        }
-        else if(roll > roll_threshold && pitch > -pitch_threshold && pitch < pitch_threshold)  // 正右方
-        {
-            state.data = "RIGHT";
-        }
-        else if(roll > -roll_threshold && roll < roll_threshold && pitch < -pitch_threshold) // 正后方
-        {
-            state.data = "BACK";
-        }
-        else if(roll < -roll_threshold && pitch < -pitch_threshold) // 左后方
-        {
-            state.data = "LEFT_BACK";
-        }
-        else if(roll > roll_threshold && pitch < -pitch_threshold) // 右后方
-        {
-            state.data = "RIGHT_BACK";
+            if(roll > -roll_threshold && roll < roll_threshold && pitch > -pitch_threshold && pitch < pitch_threshold)
+            {
+                state.data = "normal";  // 正常状态
+            }
+            else if(roll > -roll_threshold && roll < roll_threshold && pitch > pitch_threshold)  // 正前方
+            {
+                state.data = "up_front";
+            }
+            else if(roll < -roll_threshold  && pitch > pitch_threshold)  // 左前方
+            {
+                state.data = "up_left_front";
+            }
+            else if(roll > roll_threshold  && pitch > pitch_threshold) // 右前方
+            {
+                state.data = "up_right_front";
+            }
+            else if(roll < -roll_threshold && pitch > -pitch_threshold && pitch < pitch_threshold)  // 正左方
+            {
+                state.data = "up_left";
+            }
+            else if(roll > roll_threshold && pitch > -pitch_threshold && pitch < pitch_threshold)  // 正右方
+            {
+                state.data = "up_right";
+            }
+            else if(roll > -roll_threshold && roll < roll_threshold && pitch < -pitch_threshold) // 正后方
+            {
+                state.data = "up_back";
+            }
+            else if(roll < -roll_threshold && pitch < -pitch_threshold) // 左后方
+            {
+                state.data = "up_left_back";
+            }
+            else if(roll > roll_threshold && pitch < -pitch_threshold) // 右后方
+            {
+                state.data = "up_right_back";
+            }
         }
 
         state_pub.publish(state);
