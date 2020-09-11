@@ -1,0 +1,5 @@
+<launch>
+    <node name="state_detect" pkg="state_detect" type="state_detect" >
+        <remap from="imu" to="/imu/data" />
+    </node>
+</launch>
